@@ -6,14 +6,16 @@ def bodies(N):
     masses = []
 
     for i in range(N):
+        
         # Random Position (Scale 1e9)
-        px = np.random.uniform(-1e9, 1e9)
-        py = np.random.uniform(-1e9, 1e9)
-        pz = np.random.uniform(-1e9, 1e9)
+        px = np.random.uniform(-1e9, 1e9) # x
+        py = np.random.uniform(-1e9, 1e9) # y
+        pz = np.random.uniform(-1e9, 1e9) # z
+        
         # Giving Random velocities (Scale 500)
-        vx = np.random.uniform(-500, 500)
-        vy = np.random.uniform(-500, 500)
-        vz = np.random.uniform(-500, 500)
+        vx = np.random.uniform(-500, 500) # velocity-x
+        vy = np.random.uniform(-500, 500) # velocity-y
+        vz = np.random.uniform(-500, 500) # velocity-z
 
         bodies.extend([px, py, pz, vx, vy, vz])
 
