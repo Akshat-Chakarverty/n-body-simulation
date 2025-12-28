@@ -1,7 +1,7 @@
 import numpy as np
 
 
-def total_energy(y_history, masses, N):
+def total_energy_drift(y_history, masses, N):
 
     G = 6.67430e-11
     total_energies = []
@@ -35,5 +35,9 @@ def total_energy(y_history, masses, N):
                 U -= (G * masses[i] * masses[j]) / dist
 
         total_energies.append(K + U)
+    E0 = total_energy[0]
+    E= np.array(total_energies)
+    dE = E-E0
+    dE_rel = np.abs(dE)/abs(E)
 
-    return np.array(total_energies)
+    return np.array(total_energies_drift)
