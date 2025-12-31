@@ -41,3 +41,13 @@ def total_energy_drift(y_history, masses, N):
     dE_rel = np.abs(dE)/abs(E)
 
     return np.array(total_energies_drift)
+
+L_series = []
+def Angular_momentum(body_state,masses):
+    for i in range(len(masses)):
+        idx = 6*i
+        r = body_state[idx:idx+2]
+        v = body_state[idx+3:idx+5]
+        L = masses[i]*(np.cross(r,v))
+        L_series.append((L))
+    return L_series
