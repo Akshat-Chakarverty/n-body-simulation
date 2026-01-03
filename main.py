@@ -1,13 +1,18 @@
 import numpy as np
 import matplotlib.pyplot as plt
+import matplotlib
+matplotlib.rcParams['animation.ffmpeg_path'] = r"C:\ProgramData\chocolatey\bin\ffmpeg.exe"
 import integrators
 import body
 import Energy
 from mpl_toolkits.mplot3d import Axes3D
 import csv
+import time
+import matplotlib.animation as animation
 
 G = 6.67430e-11  # Gravitational Constant
-N = 100  # No. of objects
+N = 25 # No. of objects
+
 
 # generate bodies with random positions and velocities
 bodies_state, masses = body.bodies(N)
@@ -35,7 +40,7 @@ def deriv(t, bodies_state):
             dy = bodies_state[jdx + 1] - y
             dz = bodies_state[jdx + 2] - z
 
-            r = np.sqrt(dx * dx + dy * dy + dz * dz) + 1e4
+            r = np.sqrt(dx * dx + dy * dy + dz * dz) + 1e4 # softening
 
             # Acceleration = G * m_j / r^3 * vec_r
             ax += G * masses[j] * dx / r**3
@@ -51,15 +56,19 @@ def deriv(t, bodies_state):
 
 def main():
     t0 = 0.0
-    tf = 8640000.0  # time duration for simulation in seconds
-    h = 1000.0  # step size: 1000 seconds (simulation takes large jumps)
-    toler = 1e-3
-
-    y0 = np.array(bodies_state, dtype=float)
+    tf = 3600*24*100  # time duration for simulation in seconds
+    h = 1000  # step size: 6000 seconds (simulation takes large jumps)
+    toler = 1e3
+    
+    
+    y0 = bodies_state.flatten()
+    print(bodies_state)
+    print(masses)
+   
 
     # selection of integrator
     method = "verlet"  # options: "verlet", "rk4", "rk45"
-
+    start_time = time.perf_counter()
     print(f"Running simulation using {method.upper()}...")
 
     if method == "rk45":
@@ -71,20 +80,25 @@ def main():
         t, y = integrators.verlet_step(t0, y0, masses, tf, h, G=G)
 
     print("Simulation complete. Calculating energy...")
+    end_time = time.perf_counter()
 
+    runtime = end_time - start_time
+    print(f"Runtime = {runtime:.3f} seconds")
     # to calculate energy using Energy.py
     try:
         Total = Energy.total_energy_drift(y, masses, N)
         plt.figure()
         plt.grid()
         plt.plot(t, Total)
-        plt.title(f"Total Energy over Time ({method})")
+        plt.title(f"Total Energy Drift over Time ({method})")
         plt.xlabel("Time")
-        plt.ylabel("Energy")
-        plt.savefig(f"energy_{method}.png")  # saving plot for total energy
-        print(f"Energy plot saved as energy_{method}.png")  # confirmation message
+        plt.ylabel("Energy Drift")
+        plt.savefig(f"energydrift_{method}.png")  # saving plot for total energy
+        print(f"Energy plot saved as energy drift_{method}.png")  # confirmation message
     except Exception as e:
         print(f"Could not plot energy: {e}")
+
+    # plotting animation
     scale = 1e9
     E0 = Total[0]
     Ef = Total[-1]
@@ -96,13 +110,41 @@ def main():
     max_energy_deviation = np.max(np.abs(Total - E0))
 
     max_energy_drift_rate = max_energy_deviation / (tf - t0)
+    
     print("Max energy drift rate =", max_energy_drift_rate, "J/s")
 
-    # plotting animation
-    scale = 1e9
+    Angular_Momentum_Vector,Angular_drift = Energy.Angular_momentum(y,masses,N)
+    Angular_drift.shape == (len(t),)
+    max_angular_drift = np.max(np.abs(Angular_drift))
+
+    max_angular_drift_rate = max_angular_drift / (tf - t0)
+    
+    print(f"The maximum angular drift rate of the system using the method {method} is",max_angular_drift_rate)
+    
+    
+    plt.figure()
+    plt.grid()
+    plt.plot(t,Angular_Momentum_Vector)
+    plt.title(f"Total Angular Momentum over time t using ({method})")
+    plt.xlabel("Time(t)")
+    plt.ylabel("Angular_Momentum")
+    plt.savefig(f"Angular_Momentum({method}).png")
+    print(f"Energy plot saved as angular momentum {method}.png")
+    
+    
+    
+    plt.figure()
+    plt.grid()
+    plt.plot(t,Angular_drift)
+    plt.title(f"Total Angular Momentum Drift over time t using ({method})")
+    plt.xlabel("Time(t)")
+    plt.ylabel("Angular Momentum drift")
+    plt.savefig(f"Angular_Momentum_Drift({method}).png")
+    print(f"Energy plot saved as angular momentum drift_{method}.png")
+    
 
     print("Generating animation... please wait.")
-    import matplotlib.animation as animation
+    
 
     fig = plt.figure(figsize=(10, 10))
 
@@ -119,7 +161,7 @@ def main():
     max_range = np.percentile(np.abs(all_positions), 90) / scale
 
     # setting the camera to focus on main cluster of bodies
-    limit = max_range * 0.1
+    limit = 4
 
     print(f"Camera Limit set to: {limit} billion meters")
 
@@ -130,12 +172,12 @@ def main():
     ax.set_xlabel("X (1e9 m)")
     ax.set_ylabel("Y (1e9 m)")
     ax.set_zlabel("Z (1e9 m)")
-    ax.set_title(f"N-Body Simulation ({method})")
+    ax.set_title(f"Solar System Simulation using ({method})")
 
     lines = [ax.plot([], [], [], "-", alpha=0.5)[0] for _ in range(N)]
     dots = [ax.plot([], [], [], "o")[0] for _ in range(N)]
 
-    skip = 50
+    skip = 25
     num_frames = len(t) // skip
 
     def update(frame):
@@ -167,9 +209,10 @@ def main():
         fig, update, frames=num_frames, interval=30, blit=False
     )
 
-    ani.save("nbody_simulation.gif", writer="pillow", fps=20)
-    print("Animation saved as nbody_simulation.gif")
+    ani.save("n_body_simulation.mp4", writer="ffmpeg", fps=10)
+    print(f"Animation saved as nbody_simulation {method}.mp4")
 
 
 if __name__ == "__main__":
     main()
+
