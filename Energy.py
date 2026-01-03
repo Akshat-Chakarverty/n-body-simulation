@@ -1,53 +1,61 @@
 import numpy as np
 
-
-def total_energy_drift(y_history, masses, N):
+def total_energy_drift(y_history, masses, N, eps=1e4):
+   
 
     G = 6.67430e-11
-    total_energies = []
+    energies = []
 
-    
     for state in y_history:
-        #Initial Condition
-        K = 0.0
-        U = 0.0
 
         reshaped_state = state.reshape((N, 6))
 
+        positions = reshaped_state[:, 0:3]
         velocities = reshaped_state[:, 3:6]
 
+        # ---------- Kinetic Energy ----------
         v_sq = np.sum(velocities**2, axis=1)
         K = 0.5 * np.sum(masses * v_sq)
 
-        # position = x^2 + y^2 + z^2 
-        positions = reshaped_state[:, 0:3]
-        
+        # ---------- Potential Energy ----------
+        U = 0.0
         for i in range(N):
-            # START FROM i + 1 to avoid double counting
             for j in range(i + 1, N):
-
-                # Velocity vector r
                 r_vec = positions[j] - positions[i]
-                # Magnitude of the r_vec and 1e4 is added so dist ≠ 0.
-                dist = np.linalg.norm(r_vec) + 1e4
+                dist = np.sqrt(np.dot(r_vec, r_vec) + eps**2)
+                U -= G * masses[i] * masses[j] / dist
 
-                # U = -G * m1 * m2 / r
-                U -= (G * masses[i] * masses[j]) / dist
+        energies.append(K + U)
 
-        total_energies.append(K + U)
-    E0 = total_energy[0]
-    E= np.array(total_energies)
-    dE = E-E0
-    dE_rel = np.abs(dE)/abs(E)
+    E = np.array(energies)
 
-    return np.array(total_energies_drift)
+    # ---------- Energy Drift ----------
+    E0 = E[0]
+    dE = E - E0
+    dE_rel = dE / abs(E0)
+    
 
-L_series = []
-def Angular_momentum(body_state,masses):
-    for i in range(len(masses)):
-        idx = 6*i
-        r = body_state[idx:idx+2]
-        v = body_state[idx+3:idx+5]
-        L = masses[i]*(np.cross(r,v))
-        L_series.append((L))
-    return L_series
+    return np.array(dE_rel)
+
+
+
+
+def Angular_momentum(y,masses,N):
+    states = y.reshape((-1, N, 6))
+    L_vec = []
+
+    for state in states:
+        r = state[:, :3]        # (N,3)
+        v = state[:, 3:]        # (N,3)
+
+        # The total angular momentum 
+        L = np.sum(np.cross(r, masses[:, None] * v), axis=0)
+        L_vec.append(L)
+
+    L_vec = np.array(L_vec)               # (T,3)
+    L_mag = np.linalg.norm(L_vec, axis=1)
+
+    L0 = L_mag[0]
+    delta_L_over_L = np.abs(L_mag - L0) / np.abs(L0)
+
+    return L_mag,delta_L_over_L
